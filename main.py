@@ -1,10 +1,11 @@
 from bs4 import BeautifulSoup
 import requests
+import json
 
 
 def find_jobs():
-    filterout=input('Enter skills you want to filter out: ')
-    print(f'Fltering out: {filterout}')
+    filter=input('Enter skills you want to filter: ')
+    print(f'Fltering : {filter}')
     url='https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&searchTextSrc=&searchTextText=&txtKeywords=python&txtLocation='
     html_text=requests.get(url).text
 
@@ -13,8 +14,9 @@ def find_jobs():
     jobs=soup.find_all('li',class_='clearfix job-bx wht-shd-bx')
 
 
+    record=[]
 
-    for index,job in enumerate(jobs):
+    for job in jobs:
 
         published_date=job.find('span',class_='sim-posted').span.text.strip()
     # print(published_date)
@@ -36,14 +38,26 @@ def find_jobs():
             exp_year=job.find('ul',  class_='top-jd-dtl clearfix').li.text.strip('card_travel').strip()
             #print(exp_year)
 
-            if filterout not in key_skill.lower():
-                with open(f'data/{index}','w') as f:
-                    f.write(f"Job Name: {job_name}  \n")
-                    f.write(f"Company Name: {company_name} \n")
-                    f.write(f"Required Skills: {key_skill} \n")
-                    f.write(f"Exeperience Year: {exp_year} \n")
-                    f.write(f"Published Date: {published_date} \n")
-                    f.write(f"More info: {more_info} \n")
-                print(f'File Saved:{index}')
+            job_detail={
+                "job_name":job_name,
+                "company_name":company_name,
+                "key_skill":key_skill,
+                "more_info":more_info,
+                "published_date":published_date
+            }
+            if filter in key_skill:
+                record.append(job_detail)
+
+    return record
+
+def write_to_json(records):
+    with open(f'data/job_records.json','w') as f:
+        json.dump(records,f,indent=2)
+
+
+                 #print(f'File Saved:{index}')
               
-find_jobs()
+if __name__=="__main__":              
+    records=find_jobs()
+    write_to_json(records)
+
