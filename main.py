@@ -1,27 +1,65 @@
 from bs4 import BeautifulSoup
 import requests
+#from requests_html import HTMLSession
 import json
 
+url='https://www.timesjobs.com/candidate/job-search.html?from=submit&luceneResultSize=25&txtKeywords=python&postWeek=60&searchType=personalizedSearch&actualTxtKeywords=python&searchBy=0&rdoOperator=OR&pDate=I&sequence=1&startPage=1'
+html_text=requests.get(url).text
+soup=BeautifulSoup(html_text,'lxml')
 
-def find_jobs():
-    filter=input('Enter skills you want to filter: ')
-    print(f'Fltering : {filter}')
-    url='https://www.timesjobs.com/candidate/job-search.html?searchType=personalizedSearch&from=submit&searchTextSrc=&searchTextText=&txtKeywords=python&txtLocation='
-    html_text=requests.get(url).text
+#searching em tags
+em_tags=soup.find_all('em')
 
-    soup=BeautifulSoup(html_text,'lxml')
+#spliting page URL
+def find_base_url(url):
+    base_url=url.split('&startPage=1')
+    og_url=base_url[0][:-1]
+    return og_url
 
-    jobs=soup.find_all('li',class_='clearfix job-bx wht-shd-bx')
+jobs_url_base=find_base_url(url)
+print(jobs_url_base)
 
+#extracting page number of websites
+def page_number(em_tags):
+    page_number=[]
+    for em in em_tags:
+        if em.get('class') and 'active' in em['class']:
+            page_number.append(em.get_text())
+        elif em.a:
+
+            page_number.append(em.a.get_text())
+    return(len(page_number))
+
+pg_num=page_number(em_tags)
+
+#extracting list of web pages
+def jobs_url(url,page_num):
+    print(page_num)
+    print(url)
+    jobs_url_list=[]
+    for page in range(1,page_num):
+        job_page_url=url+str(page)+'&startPage=1'
+        jobs_url_list.append(job_page_url)
+    return(jobs_url_list)
+
+pages_url_list=jobs_url(jobs_url_base,pg_num)
+#print(pages_url_list)
+
+#extracting deatil of jobs from each page
+def extract_records(job_url_list):
 
     record=[]
+    for jobs in job_url_list:
+        job_html_text=requests.get(jobs).text
+        soups=BeautifulSoup(job_html_text,'lxml')
+        jobss=soups.find_all('li',class_='clearfix job-bx wht-shd-bx')
+        print(jobs)
 
-    for job in jobs:
+        for job in jobss:
+            published_date=job.find('span',class_='sim-posted').span.text.strip()
+        #print(published_date)
 
-        published_date=job.find('span',class_='sim-posted').span.text.strip()
-    # print(published_date)
-
-        if 'few' in published_date.lower():
+            #if 'few' in published_date.lower():
 
             job_name=job.a.text.strip()
         # print(job_name)
@@ -43,21 +81,24 @@ def find_jobs():
                 "company_name":company_name,
                 "key_skill":key_skill,
                 "more_info":more_info,
+                "experience year":exp_year,
                 "published_date":published_date
             }
-            if filter in key_skill:
-                record.append(job_detail)
+            #if filter in key_skill:
+            record.append(job_detail)
 
     return record
 
+
+#dumping extracted data into json
 def write_to_json(records):
-    with open(f'data/job_records.json','w') as f:
+    with open(f'data/job_records_multiple_page.json','w') as f:
         json.dump(records,f,indent=2)
 
 
                  #print(f'File Saved:{index}')
-              
+            
 if __name__=="__main__":              
-    records=find_jobs()
+    records=extract_records(pages_url_list)
     write_to_json(records)
 
