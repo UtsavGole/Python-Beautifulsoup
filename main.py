@@ -1,5 +1,6 @@
 from bs4 import BeautifulSoup
 import requests
+import os
 #from requests_html import HTMLSession
 import json
 
@@ -45,8 +46,32 @@ def jobs_url(url,page_num):
 pages_url_list=jobs_url(jobs_url_base,pg_num)
 #print(pages_url_list)
 
+#Function to save the last scrapped page
+def save_last_scrapped_url(last_scraped_url,last_url_file='last_url.txt'):
+    with open(last_url_file,'w') as file:
+        file.write(last_scraped_url)
+
+#Function to load the lst scrapped URL
+def load_last_scraped_url(last_url_file='last_url.txt'):
+    if os.path.exists(last_url_file):
+        with open(last_url_file,'r') as file:
+            return file.read().strip()
+    return None
+
+
 #extracting deatil of jobs from each page
 def extract_records(job_url_list):
+
+    last_scraped_url=load_last_scraped_url()
+
+    if last_scraped_url:
+        try:
+            last_scraped_index=job_url_list.index(last_scraped_url)
+            job_url_list=job_url_list[last_scraped_index+1:]
+
+        except ValueError:
+            pass
+
 
     record=[]
     for jobs in job_url_list:
@@ -86,13 +111,16 @@ def extract_records(job_url_list):
             }
             #if filter in key_skill:
             record.append(job_detail)
+        save_last_scrapped_url(jobs)
 
     return record
 
 
+
+
 #dumping extracted data into json
 def write_to_json(records):
-    with open(f'data/job_records_multiple_page.json','w') as f:
+    with open(f'data/job_records_multiple_pagesss.json','w') as f:
         json.dump(records,f,indent=2)
 
 
